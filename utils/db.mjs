@@ -10,41 +10,25 @@ const url = `mongodb://${host}:${port}/`;
 class DBClient {
   constructor() {
     this.db = null;
-    MongoClient.connect(url, { useUnifiedTopology: true }, async (error, client) => {
-      if (error) {
-        console.log(error);
-        return;
-      }
+    MongoClient.connect(url, { useUnifiedTopology: true }, (error, client) => {
+      if (error) console.log(error);
       this.db = client.db(database);
-      try {
-        const collections = await this.db.listCollections().toArray();
-        const collectionNames = collections.map((col) => col.name);
+      (async () => {
+        try {
+          const collections = await this.db.listCollections().toArray();
+          const collectionNames = collections.map((col) => col.name);
 
-        if (!collectionNames.includes('users')) {
-          await this.db.createCollection('users');
-        }
-        if (!collectionNames.includes('files')) {
-          await this.db.createCollection('files');
-        }
+          if (!collectionNames.includes('users')) {
+            await this.db.createCollection('users');
+          }
 
-        // Ensure 'users' collection has 4 documents
-        const userCount = await this.db.collection('users').countDocuments();
-        if (userCount < 4) {
-          const usersToAdd = 4 - userCount;
-          const users = Array.from({ length: usersToAdd }, (_, i) => ({ name: `User${i + 1}` }));
-          await this.db.collection('users').insertMany(users);
+          if (!collectionNames.includes('files')) {
+            await this.db.createCollection('files');
+          }
+        } catch (err) {
+          console.error('Failed to create collections', err);
         }
-
-        // Ensure 'files' collection has 30 documents
-        const fileCount = await this.db.collection('files').countDocuments();
-        if (fileCount < 30) {
-          const filesToAdd = 30 - fileCount;
-          const files = Array.from({ length: filesToAdd }, (_, i) => ({ filename: `File${i + 1}` }));
-          await this.db.collection('files').insertMany(files);
-        }
-      } catch (err) {
-        console.error('Failed to create collections or insert documents', err);
-      }
+      })();
     });
   }
 
