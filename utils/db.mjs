@@ -10,31 +10,35 @@ const url = `mongodb://${host}:${port}/`;
 class DBClient {
   constructor() {
     this.db = null;
-    MongoClient.connect(url, { useUnifiedTopology: true }, (error, client) => {
-      if (error) console.log(error);
-      this.db = client.db(database);
-      (async () => {
-        try {
-          const collections = await this.db.listCollections().toArray();
-          const collectionNames = collections.map((col) => col.name);
+    this.connected = false;
+    MongoClient.connect(url, { useUnifiedTopology: true })
+      .then((client) => {
+        this.db = client.db(database);
+        this.connected = true;
+        (async () => {
+          try {
+            const collections = await this.db.listCollections().toArray();
+            const collectionNames = collections.map((col) => col.name);
 
-          if (!collectionNames.includes('users')) {
-            await this.db.createCollection('users');
-          }
+            if (!collectionNames.includes('users')) {
+              await this.db.createCollection('users');
+            }
 
-          if (!collectionNames.includes('files')) {
-            await this.db.createCollection('files');
+            if (!collectionNames.includes('files')) {
+              await this.db.createCollection('files');
+            }
+          } catch (err) {
+            console.error('Failed to create collections', err);
           }
-        } catch (err) {
-          console.error('Failed to create collections', err);
-        }
-      })();
-    });
+        })();
+      })
+      .catch((error) => {
+        console.log(error);
+      });
   }
 
   isAlive() {
-    // Check if MongoDB client is connected
-    return !!this.db;
+    return this.connected;
   }
 
   async nbUsers() {
